@@ -1,5 +1,5 @@
 import React from "react";
-import { loginUri } from '../api/auth';
+import { loginUri, register } from '../api/auth';
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -50,7 +50,7 @@ function useUserDispatch() {
   return context;
 }
 
-export { UserProvider, useUserState, useUserDispatch, loginUser, signOut };
+export { UserProvider, useUserState, useUserDispatch, loginUser, registerUser, signOut };
 
 // ###########################################################
 
@@ -72,25 +72,34 @@ function loginUser(dispatch, login, password, history, setIsLoading, setError) {
     })
     .catch((error) => {
       toast.error(error.response.data.message);
-      //dispatch({ type: "LOGIN_FAILURE" });
       setError(true);
       setIsLoading(false);
     });
+}
 
-  // if (!!login && !!password) {
-  //   setTimeout(() => {
-  //     localStorage.setItem('id_token', 1)
-  //     setError(null)
-  //     setIsLoading(false)
-  //     dispatch({ type: 'LOGIN_SUCCESS' })
+function registerUser(dispatch, email, name, password, passwordconfirmation, history, setIsLoading, setError) {
+  setError(false);
+  setIsLoading(true);
 
-  //     history.push('/app/dashboard')
-  //   }, 2000);
-  // } else {
-  //   dispatch({ type: "LOGIN_FAILURE" });
-  //   setError(true);
-  //   setIsLoading(false);
-  // }
+  register({
+    email: email,
+    name: name,
+    password: password,
+    password_confirmation: passwordconfirmation
+  })
+    .then(({ user, token }) => {
+      localStorage.setItem('id_token', token);
+      localStorage.setItem('users', user);
+      setError(null);
+      setIsLoading(false)
+      dispatch({ type: 'LOGIN_SUCCESS' })
+      history.push('/app/dashboard');
+    })
+    .catch((error) => {
+      toast.error(error.response.data.message);
+      setError(true);
+      setIsLoading(false);
+    });
 }
 
 function signOut(dispatch, history) {

@@ -19,10 +19,24 @@ class ArticleController extends Controller
      */
     public function index(Request $request)
     {
-        if ($request->user()->is_admin) {
-            return Article::loadAll();
+        $query = Article::query();
+        if ($filter = \Request::get('filter')) {
+            $query->where('title','LIKE',"%$filter%")
+            ->orWhere('description','LIKE',"%$filter%");
         }
-        return Article::loadAllMine($request->user()->id);
+
+        if ($order = \Request::get('sort')) {
+            $splitOrder = explode('|',  $order);
+            $query->orderBy($splitOrder[0], $splitOrder[1]);
+        }else{
+            $query->latest();
+        }
+        $page = 10;
+        if ($perpage = \Request::get('per_page')) {
+            $page = $perpage;
+        }
+        $qry = $query->paginate($page);
+        return $qry;
     }
 
     /**
