@@ -20,11 +20,22 @@ class ArticleController extends Controller
     public function index(Request $request)
     {
         $query = Article::query();
-        if ($filter = \Request::get('filter')) {
-            $query->where('title','LIKE',"%$filter%")
-            ->orWhere('description','LIKE',"%$filter%");
+        if ($search = \Request::get('search')) {
+            $query->where('title','LIKE',"%$search%")
+            ->orWhere('description','LIKE',"%$search%");
         }
-
+        if ($id = \Request::get('id')) {
+            $query->where('id', $id);
+        }
+        if ($title = \Request::get('title')) {
+            $query->where('title', $title);
+        }
+        if ($published = \Request::get('published')) {
+            $query->where('published', $published);
+        }
+        if ($published_at = \Request::get('published_at')) {
+            $query->where('published_at', $published_at);
+        }
         if ($order = \Request::get('sort')) {
             $splitOrder = explode('|',  $order);
             $query->orderBy($splitOrder[0], $splitOrder[1]);
@@ -142,6 +153,17 @@ class ArticleController extends Controller
     public function delete($id)
     {
         $article = Article::findOrFail($id);
+
+        $article->delete();
+
+        return response([], 200);
+    }
+
+    public function deletes($id)
+    {
+        $ids = explode(",", $id);
+
+        $article = Article::whereIn('id', $ids);
 
         $article->delete();
 

@@ -11,4 +11,5 @@ Route::group(['middleware' => 'auth:api'], function() {
     Route::get('/{id}', 'ArticleController@show')->name('articles.show');
     Route::match(['put', 'patch'], '/{id}', 'ArticleController@update')->name('articles.update');
     Route::delete('/{id}', 'ArticleController@delete')->name('articles.delete');
+    Route::delete('/deletes/{id}', 'ArticleController@deletes')->name('articles.deletes');
 });

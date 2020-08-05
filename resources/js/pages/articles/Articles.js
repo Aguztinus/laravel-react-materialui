@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Typography, CircularProgress, Grid, Button } from '@material-ui/core';
 import MUIDataTable from 'mui-datatables';
+import { useConfirm } from 'material-ui-confirm';
 
 // components
 import PageTitle from '../../components/PageTitle/PageTitle';
@@ -9,6 +10,7 @@ import useDebounce from '../../util/debounce';
 import moment from 'moment';
 
 export default function Articles() {
+  const confirm = useConfirm();
 	const [ refresh, setRefresh ] = useState(false);
 	const [ datatableData, setDatatableData ] = useState([]);
 	const [ loading, setLoading ] = useState(false);
@@ -16,18 +18,17 @@ export default function Articles() {
 	const [ rowsPerPage, setRowsPerPage ] = useState('');
 	const [ page, setPage ] = useState(1);
 	const [ sortOrder, setSortOrder ] = useState('');
-	const [ filter, setFilter ] = useState('');
-	const [ filterDrop, setFilterDrop ] = useState('');
+	const [ search, setSearch ] = useState('');
+  const [ filterDrop, setFilterDrop ] = useState('');
 
-	const debouncedSearchTerm = useDebounce(filter, 500);
+	const debouncedSearchTerm = useDebounce(search, 500);
 
 	useEffect(
 		() => {
 			const fetchData = async () => {
 				setLoading(true);
-				console.log(filterDrop);
-
-				await client('/api/v1/articles?page=' + page + sortOrder + debouncedSearchTerm + rowsPerPage)
+			
+				await client('/api/v1/articles?page=' + page + sortOrder + debouncedSearchTerm + rowsPerPage + filterDrop)
 					.then((data) => {
 						setDatatableData(data.data);
 						setCount(data.total);
@@ -41,11 +42,42 @@ export default function Articles() {
 		[ refresh, page, sortOrder, debouncedSearchTerm, rowsPerPage, filterDrop ]
 	);
 
-	const handleFilterSubmit = (applyFilters) => {
-		let filterList = applyFilters();
-		let uri = `&filters=${filterList}`;
+	const handleFilterSubmit = (currentFilterList, applyFilters) => {
+    let filterList = applyFilters();
+    var uri = changeFilterToUrl(filterList);
 		setFilterDrop(uri);
-	};
+  };
+  
+  const changeFilterToUrl = (filterList) => {
+    var uritam = '';
+    filterList.map((item, index) => {
+      if(item.length > 0){
+        uritam = uritam + `&${columns[index].name}=${item}`;
+      }
+    })
+		return uritam;
+  };
+  
+  const deletePost = (filterList) => {
+    var del = changeDeleteToUrl(filterList);
+    setLoading(true);
+			
+				 client('/api/v1/articles/deletes/' + del.join(), { method: 'delete' })
+					.then(() => {
+            setRefresh(!refresh);
+					})
+					.catch(() => null);
+
+				setLoading(false);
+  };
+
+  const changeDeleteToUrl = (filterList) => {
+    var uritam = [];
+    filterList.map((item) => {
+      uritam.push(datatableData[item.dataIndex].id);
+    })
+		return uritam;
+  };
 
 	const columns = [
 		{
@@ -130,9 +162,9 @@ export default function Articles() {
 					setSortOrder(sort);
 					break;
 				case 'search':
-					var filter = '&filter=' + tableState.searchText;
-					setFilter(filter);
-					break;
+					var search = '&search=' + tableState.searchText;
+					setSearch(search);
+          break;
 				default:
 					console.log('action not handled.');
 			}
@@ -141,18 +173,25 @@ export default function Articles() {
 		customFilterDialogFooter: (currentFilterList, applyNewFilters) => {
 			return (
 				<div style={{ marginTop: '40px' }}>
-					<Button variant="contained" onClick={() => handleFilterSubmit(applyNewFilters)}>
+					<Button variant="contained" onClick={() => handleFilterSubmit(currentFilterList, applyNewFilters)}>
 						Apply Filters
 					</Button>
 				</div>
 			);
-		},
+    },
+    onFilterChipClose: (index, removedFilter, filterList) => {
+      var uri = changeFilterToUrl(filterList);
+		  setFilterDrop(uri);
+    },
 		onFilterChange: (changedColumn, filterList) => {
 			//console.log(changedColumn, filterList);
 		},
-		onRowsDelete: (rowsDeleted, data) => {
-			//console.log(rowsDeleted, data);
-			//console.log(datatableData[data[0].dataIndex]);
+		onRowsDelete: (rowsDeleted) => {
+      confirm({ description: 'This action is permanent!' })
+      .then(() => { 
+          deletePost(rowsDeleted.data);
+       })
+      .catch(() => { /* ... */ });
 		},
 		onRowSelectionChange: (currentRowsSelected, allRowsSelected, rowsSelected) => {
 			//console.log(currentRowsSelected[0].dataIndex);
